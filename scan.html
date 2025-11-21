@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR  magic tool</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+     @import url("style.css");
+  </style>    
+</head>
+
+<body>
+
+<div class="app-card">
+  <header>
+    <div class="logo-icon">🐰✨</div>
+    <h1>QR magic tool</h1>
+    <p>One-click scan or generate QR codes ~</p>
+  </header>
+
+  <!-- 🔸 Tabs -->
+  <div class="tabs">
+    <div class="tab active" data-tab="scan">
+      <i class="fas fa-camera"></i>
+      <span>Scan QR</span>
+    </div>
+    <div class="tab" data-tab="gen">
+      <i class="fas fa-barcode"></i>
+      <span>Generate QR</span>
+    </div>
+    <div class="tab" data-tab="history">
+      <i class="fas fa-history"></i>
+      <span>History</span>
+    </div>
+  </div>
+
+  <!-- Scan Page -->
+  <div id="scan" class="content active">
+    <div class="panel-title">
+      <i class="fas fa-camera"></i>
+      <span>Scan QR Code</span>
+    </div>
+    
+    <div class="two-col">
+      <div class="card">
+        <h3><i class="fas fa-video"></i> Camera Scan</h3>
+        <div class="video-container">
+          <video id="video" autoplay muted playsinline></video>
+          <div id="scanOverlay" class="scan-overlay hidden"></div>
+        </div>
+        <div class="action-buttons">
+          <button id="startCam">
+            <span id="startIcon" class="fas fa-play"></span>
+            <span id="startText">Start Scan</span>
+          </button>
+          <button id="stopCam" disabled>
+            <span id="stopIcon" class="fas fa-stop"></span>
+            <span>Stop</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3><i class="fas fa-image"></i> Image Scan</h3>
+        <div class="file-upload">
+          <label class="file-upload-label" for="fileInput">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <div>Click to select an image or drag it here</div>
+            <div style="font-size: 0.8rem; margin-top: 5px; color: var(--text);">Supports JPG, PNG, GIF formats</div>
+          </label>
+          <input type="file" id="fileInput" accept="image/*" />
+        </div>
+        <button id="scanImg" class="secondary">
+          <span id="scanIcon" class="fas fa-search"></span>
+          <span>Scan Image QR</span>
+        </button>
+        <div id="scanResult" class="result-box hidden">
+          <i class="fas fa-check-circle"></i>
+          <span id="resultText"></span>
+        </div>
+        <div id="scanError" class="error-box hidden">
+          <i class="fas fa-exclamation-circle"></i>
+          <span id="errorText"></span>
+        </div>
+      </div>
+    </div>
+
+    <canvas id="canvas" class="hidden"></canvas>
+  </div>
+
+  <!-- 生成 QR 页面 -->
+  <div id="gen" class="content">
+    <div class="panel-title">
+      <i class="fas fa-barcode"></i>
+      <span>Generate QR Code</span>
+    </div>
+    
+    <div class="card">
+      <label for="type"><i class="fas fa-list"></i> Content Type</label>
+      <select id="type">
+        <option value="text">Text</option>
+        <option value="url">URL</option>
+        <option value="tel">Phone</option>
+        <option value="sms">SMS</option>
+        <option value="email">Email</option>
+        <option value="wifi">WiFi</option>
+      </select>
+
+      <div id="fields"></div>
+
+      <div class="qr-customization">
+        <h3><i class="fas fa-palette"></i> Customize Style</h3>
+        <div class="color-picker">
+          <span>Foreground Color:</span>
+          <div class="color-option active" style="background-color: #000000;" data-color="000000"></div>
+          <div class="color-option" style="background-color: #ff8bbf;" data-color="ff8bbf"></div>
+          <div class="color-option" style="background-color: #d8c7ff;" data-color="d8c7ff"></div>
+          <div class="color-option" style="background-color: #bce6ff;" data-color="bce6ff"></div>
+          <div class="color-option" style="background-color: #c2ffd9;" data-color="c2ffd9"></div>
+        </div>
+        <div class="color-picker">
+          <span>Background Color:</span>
+          <div class="color-option active" style="background-color: #ffffff;" data-bgcolor="ffffff"></div>
+          <div class="color-option" style="background-color: #fff6c7;" data-bgcolor="fff6c7"></div>
+          <div class="color-option" style="background-color: #ffe9f5;" data-bgcolor="ffe9f5"></div>
+          <div class="color-option" style="background-color: #f8f1ff;" data-bgcolor="f8f1ff"></div>
+          <div class="color-option" style="background-color: #f0fcff;" data-bgcolor="f0fcff"></div>
+        </div>
+      </div>
+
+      <div class="action-buttons">
+        <button id="genBtn">
+          <span id="genIcon" class="fas fa-bolt"></span>
+          <span>Generate QR ✨</span>
+        </button>
+      </div>
+      
+      <div id="genError" class="error-box hidden">
+        <i class="fas fa-exclamation-circle"></i>
+        <span id="genErrorText"></span>
+      </div>
+    </div>
+
+    <div class="qr-preview" id="qrPreview">
+      <!-- 二维码和下载按钮将在这里动态生成 -->
+    </div>
+  </div>
+
+  <!-- 历史记录页面 -->
+  <div id="history" class="content">
+    <div class="panel-title">
+      <i class="fas fa-history"></i>
+      <span>History</span>
+    </div>
+    
+    <div class="card">
+      <h3><i class="fas fa-list-alt"></i> Scan and Generate History</h3>
+      <div id="historyList">
+        <!-- History will be dynamically generated here -->
+        <p id="emptyHistory" style="text-align: center; padding: 20px; color: var(--text-light);">
+          <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+          No history available
+        </p>
+      </div>
+      <div class="action-buttons">
+        <button id="clearHistory" class="secondary">
+          <span class="fas fa-trash"></span>
+          <span>Clear History</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>Bunny's QR Magic Tool &copy; 2023 - Making QR codes cute and practical</p>
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.min.js"></script>
+<script>
+  // Tab switching
+  const tabs = document.querySelectorAll('.tab');
+  const contents = document.querySelectorAll('.content');
+  
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const tabId = tab.getAttribute('data-tab');
+      
+      tabs.forEach(t => t.classList.remove('active'));
+      contents.forEach(c => c.classList.remove('active'));
+      
+      tab.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+      
+      // Stop camera when switching tabs
+      if (tabId !== 'scan' && stream) {
+        stopCamera();
+      }
+      
+      // Load history when switching to history tab
+      if (tabId === 'history') {
+        loadHistory();
+      }
+    });
+  });
+
+  // --- Scan Section ---
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const scanOverlay = document.getElementById('scanOverlay');
+  const scanResult = document.getElementById('scanResult');
+  const scanError = document.getElementById('scanError');
+  const resultText = document.getElementById('resultText');
+  const errorText = document.getElementById('errorText');
+  const startCamBtn = document.getElementById('startCam');
+  const stopCamBtn = document.getElementById('stopCam');
+  const scanImgBtn = document.getElementById('scanImg');
+  const fileInput = document.getElementById('fileInput');
+  
+  let stream = null;
+  let scanTimer = null;
+  let lastResult = '';
+
+  // Camera functions
+  async function startCamera() {
+    try {
+      showError(scanError, false);
+      showResult(scanResult, false);
+      
+      stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' } 
+      });
+      
+      video.srcObject = stream;
+      startCamBtn.disabled = true;
+      stopCamBtn.disabled = false;
+      scanOverlay.classList.remove('hidden');
+      
+      // Update button state
+      startCamBtn.innerHTML = '<span class="loading"></span><span>扫描中...</span>';
+      
+      scanTimer = setInterval(scanQRCode, 500);
+    } catch (err) {
+      console.error('Failed to access camera:', err);
+      showError(scanError, 'Cannot access camera: ' + err.message);
+      resetCameraButtons();
+    }
+  }
+
+  function stopCamera() {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      stream = null;
+    }
+    
+    if (scanTimer) {
+      clearInterval(scanTimer);
+      scanTimer = null;
+    }
+    
+    resetCameraButtons();
+    scanOverlay.classList.add('hidden');
+    video.srcObject = null;
+  }
+
+  function resetCameraButtons() {
+    startCamBtn.disabled = false;
+    stopCamBtn.disabled = true;
+    startCamBtn.innerHTML = '<span id="startIcon" class="fas fa-play"></span><span id="startText">Start Scanning</span>';
+  }
+
+  function scanQRCode() {
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, canvas.width, canvas.height);
+      
+      if (code && code.data !== lastResult) {
+        lastResult = code.data;
+        showResult(scanResult, code.data);
+        addToHistory(code.data, 'scan');
+      }
+    }
+  }
+
+  // Image scanning
+  function scanImage() {
+    const file = fileInput.files[0];
+    if (!file) {
+      showError(scanError, 'Please select an image file first');
+      return;
+    }
+    
+    showError(scanError, false);
+    showResult(scanResult, false);
+    
+    scanImgBtn.innerHTML = '<span class="loading"></span><span>Scanning...</span>';
+    scanImgBtn.disabled = true;
+    
+    const img = new Image();
+    img.onload = function() {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+      
+      const imageData = ctx.getImageData(0, 0, img.width, img.height);
+      const code = jsQR(imageData.data, img.width, img.height);
+      
+      if (code) {
+        showResult(scanResult, code.data);
+        addToHistory(code.data, 'scan');
+      } else {
+        showError(scanError, 'No QR code detected, please try another image');
+      }
+      
+      resetScanImageButton();
+    };
+    
+    img.onerror = function() {
+      showError(scanError, 'Image loading failed, please try again');
+      resetScanImageButton();
+    };
+    
+    img.src = URL.createObjectURL(file);
+  }
+
+  function resetScanImageButton() {
+    scanImgBtn.innerHTML = '<span id="scanIcon" class="fas fa-search"></span><span>Scan Image QR Code</span>';
+    scanImgBtn.disabled = false;
+  }
+
+  function showResult(element, message) {
+    if (message) {
+      resultText.textContent = message;
+      element.classList.remove('hidden');
+    } else {
+      element.classList.add('hidden');
+    }
+  }
+
+  function showError(element, message) {
+    if (message) {
+      errorText.textContent = message;
+      element.classList.remove('hidden');
+    } else {
+      element.classList.add('hidden');
+    }
+  }
+
+  // Drag and drop for file input
+  const fileUploadLabel = document.querySelector('.file-upload-label');
+  
+  fileUploadLabel.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    fileUploadLabel.classList.add('dragover');
+  });
+  
+  fileUploadLabel.addEventListener('dragleave', () => {
+    fileUploadLabel.classList.remove('dragover');
+  });
+  
+  fileUploadLabel.addEventListener('drop', (e) => {
+    e.preventDefault();
+    fileUploadLabel.classList.remove('dragover');
+    
+    if (e.dataTransfer.files.length) {
+      fileInput.files = e.dataTransfer.files;
+      document.querySelector('.file-upload-label div:first-child').textContent = 'Selected: ' + e.dataTransfer.files[0].name;
+    }
+  });
+
+  // Event listeners for scan section
+  startCamBtn.addEventListener('click', startCamera);
+  stopCamBtn.addEventListener('click', stopCamera);
+  scanImgBtn.addEventListener('click', scanImage);
+  
+  fileInput.addEventListener('change', function() {
+    if (this.files.length > 0) {
+      document.querySelector('.file-upload-label div:first-child').textContent = 'Selected: ' + this.files[0].name;
+    }
+  });
+  
+  // --- Generate Section ---
+  const typeSelect = document.getElementById('type');
+  const fields = document.getElementById('fields');
+  const genBtn = document.getElementById('genBtn');
+  const genError = document.getElementById('genError');
+  const genErrorText = document.getElementById('genErrorText');
+  const qrPreview = document.getElementById('qrPreview');
+  const colorOptions = document.querySelectorAll('.color-option');
+  
+  let currentQRCode = null;
+  let selectedColor = '000000';
+  let selectedBgColor = 'ffffff';
+
+  // Color picker functionality
+  colorOptions.forEach(option => {
+    option.addEventListener('click', function() {
+      // Remove active class from all options in the same group
+      const parent = this.parentElement;
+      parent.querySelectorAll('.color-option').forEach(opt => {
+        opt.classList.remove('active');
+      });
+      
+      // Add active class to clicked option
+      this.classList.add('active');
+      
+      // Update selected color
+      if (this.hasAttribute('data-color')) {
+        selectedColor = this.getAttribute('data-color');
+      } else if (this.hasAttribute('data-bgcolor')) {
+        selectedBgColor = this.getAttribute('data-bgcolor');
+      }
+    });
+  });
+
+  function renderFields() {
+    const type = typeSelect.value;
+    let html = '';
+    
+    switch (type) {
+      case 'text':
+        html = '<label for="val"><i class="fas fa-font"></i> Text Content</label><textarea id="val" placeholder="Enter text to encode " rows="4"></textarea>';
+        break;
+      case 'url':
+        html = '<label for="val"><i class="fas fa-link"></i> URL</label><input id="val" type="url" placeholder="https://example.com" />';
+        break;
+      case 'tel':
+        html = '<label for="val"><i class="fas fa-phone"></i> Phone Number</label><input id="val" type="tel" placeholder="+8613800138000" />';
+        break;
+      case 'sms':
+        html = '<label for="num"><i class="fas fa-sms"></i> Phone Number</label><input id="num" type="tel" placeholder="+8613800138000" />' +
+               '<label for="msg"><i class="fas fa-comment"></i> Message</label><textarea id="msg" placeholder="Enter message content" rows="3"></textarea>';
+        break;
+      case 'email':
+        html = '<label for="mail"><i class="fas fa-envelope"></i> Email Address</label><input id="mail" type="email" placeholder="user@example.com" />' +
+               '<label for="sub"><i class="fas fa-tag"></i> Subject</label><input id="sub" placeholder="Email Subject" />' +
+               '<label for="msg"><i class="fas fa-comment"></i> Message</label><textarea id="msg" placeholder="Enter email content" rows="3"></textarea>';
+        break;
+      case 'wifi':
+        html = '<label for="ssid"><i class="fas fa-wifi"></i> WiFi Name (SSID)</label><input id="ssid" placeholder="WiFi Name" />' +
+               '<label for="pwd"><i class="fas fa-key"></i> WiFi Password</label><input id="pwd" type="password" placeholder="WiFi Password" />' +
+               '<label for="enc"><i class="fas fa-shield-alt"></i> Encryption</label><select id="enc"><option value="WPA">WPA/WPA2</option><option value="WEP">WEP</option><option value="nopass">No Password</option></select>';
+        break;
+    }
+    
+    fields.innerHTML = html;
+    showError(genError, false);
+  }
+
+  function generateQRCode() {
+    const type = typeSelect.value;
+    let data = '';
+    
+    // Validate inputs and build data string
+    try {
+      switch (type) {
+        case 'text':
+          const text = document.getElementById('val').value.trim();
+          if (!text) throw new Error('Please enter text content');
+          data = text;
+          break;
+        case 'url':
+          const url = document.getElementById('val').value.trim();
+          if (!url) throw new Error('Please enter URL');
+          // Add protocol if missing
+          data = url.includes('://') ? url : 'https://' + url;
+          break;
+        case 'tel':
+          const tel = document.getElementById('val').value.trim();
+          if (!tel) throw new Error('Please enter phone number');
+          data = 'tel:' + tel;
+          break;
+        case 'sms':
+          const num = document.getElementById('num').value.trim();
+          const smsMsg = document.getElementById('msg').value.trim();
+          if (!num) throw new Error('Please enter phone number');
+          data = `sms:${num}${smsMsg ? `?body=${encodeURIComponent(smsMsg)}` : ''}`;
+          break;
+        case 'email':
+          const mail = document.getElementById('mail').value.trim();
+          const sub = document.getElementById('sub').value.trim();
+          const emailMsg = document.getElementById('msg').value.trim();
+          if (!mail) throw new Error('Please enter email address');
+          data = `mailto:${mail}`;
+          if (sub || emailMsg) {
+            data += '?';
+            if (sub) data += `subject=${encodeURIComponent(sub)}`;
+            if (sub && emailMsg) data += '&';
+            if (emailMsg) data += `body=${encodeURIComponent(emailMsg)}`;
+          }
+          break;
+        case 'wifi':
+          const ssid = document.getElementById('ssid').value.trim();
+          const pwd = document.getElementById('pwd').value;
+          const enc = document.getElementById('enc').value;
+          if (!ssid) throw new Error('Please enter WiFi name');
+          if (enc !== 'nopass' && !pwd) throw new Error('Please enter WiFi password');
+          data = `WIFI:T:${enc};S:${ssid};P:${pwd};;`;
+          break;
+      }
+      
+      // Generate QR code
+      currentQRCode = new QRious({
+        value: data,
+        size: 250,
+        background: '#' + selectedBgColor,
+        foreground: '#' + selectedColor,
+        level: 'H'
+      });
+      
+      // 创建更美观的二维码预览和下载按钮布局
+      qrPreview.innerHTML = `
+        <div class="qr-container">
+          <div class="qr-box pop">
+            <img src="${currentQRCode.toDataURL()}" alt="Generated QR Code" />
+          </div>
+          <div class="qr-actions">
+            <button id="downloadBtn" class="secondary">
+              <span id="downloadIcon" class="fas fa-download"></span>
+              <span>Download QR Code</span>
+            </button>
+            <button id="shareBtn" class="secondary">
+              <span id="shareIcon" class="fas fa-share-alt"></span>
+              <span>Share</span>
+            </button>
+          </div>
+        </div>
+      `;
+      
+      showError(genError, false);
+      
+      // 添加下载按钮事件监听
+      document.getElementById('downloadBtn').addEventListener('click', downloadQRCode);
+      document.getElementById('shareBtn').addEventListener('click', shareQRCode);
+      
+      // Add to history
+      addToHistory(data, 'generate');
+    } catch (err) {
+      showError(genError, err.message);
+      qrPreview.innerHTML = '';
+    }
+  }
+
+  function downloadQRCode() {
+    if (!currentQRCode) return;
+    
+    const link = document.createElement('a');
+    link.download = 'qrcode.png';
+    link.href = currentQRCode.toDataURL();
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  function shareQRCode() {
+    if (!currentQRCode) return;
+    
+    // 如果支持Web Share API，使用它
+    if (navigator.share) {
+      navigator.share({
+        title: 'QR Code',
+        text: 'Scan this QR Code',
+        url: currentQRCode.toDataURL()
+      })
+      .catch(err => console.log('Share cancelled or failed:', err));
+    } else {
+      // 如果不支持Web Share API，复制到剪贴板
+      const tempInput = document.createElement('input');
+      document.body.appendChild(tempInput);
+      tempInput.value = currentQRCode.toDataURL();
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+      alert('QR code link copied to clipboard');
+    }
+  }
+
+  // Initialize and set up event listeners
+  renderFields();
+  typeSelect.addEventListener('change', renderFields);
+  genBtn.addEventListener('click', generateQRCode);
+  
+  // --- History Section ---
+  const clearHistoryBtn = document.getElementById('clearHistory');
+  const historyList = document.getElementById('historyList');
+  const emptyHistory = document.getElementById('emptyHistory');
+  
+  function addToHistory(content, type) {
+    let history = JSON.parse(localStorage.getItem('qrHistory') || '[]');
+    
+    // Add new item to beginning of array
+    history.unshift({
+      content: content,
+      type: type,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Keep only last 20 items
+    if (history.length > 20) {
+      history = history.slice(0, 20);
+    }
+    
+    localStorage.setItem('qrHistory', JSON.stringify(history));
+    
+    // If on history tab, update the display
+    if (document.getElementById('history').classList.contains('active')) {
+      loadHistory();
+    }
+  }
+  
+  function loadHistory() {
+    const history = JSON.parse(localStorage.getItem('qrHistory') || '[]');
+    
+    if (history.length === 0) {
+      emptyHistory.style.display = 'block';
+      historyList.innerHTML = '';
+      historyList.appendChild(emptyHistory);
+      return;
+    }
+    
+    emptyHistory.style.display = 'none';
+    
+    let html = '';
+    history.forEach((item, index) => {
+      const date = new Date(item.timestamp);
+      const typeIcon = item.type === 'scan' ? 'fas fa-camera' : 'fas fa-barcode';
+      const typeText = item.type === 'scan' ? 'Scan' : 'Generate';
+      const shortContent = item.content.length > 50 ? 
+        item.content.substring(0, 50) + '...' : item.content;
+      
+      html += `
+        <div class="history-item">
+          <div class="history-content">
+            <i class="${typeIcon}"></i> ${typeText}: ${shortContent}
+            <div style="font-size: 0.8rem; color: var(--text-light); margin-top: 5px;">
+              ${date.toLocaleString()}
+            </div>
+          </div>
+          <div class="history-actions">
+            <button class="history-btn" onclick="copyToClipboard('${item.content.replace(/'/g, "\\'")}')">
+              <i class="fas fa-copy"></i>
+            </button>
+            <button class="history-btn" onclick="deleteHistoryItem(${index})">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    });
+    
+    historyList.innerHTML = html;
+  }
+  
+  function copyToClipboard(text) {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        // Show success message
+        const toast = document.createElement('div');
+        toast.textContent = 'Copied to clipboard';
+        toast.style.cssText = `
+          position: fixed;
+          bottom: 20px;
+          right: 20px;
+          background: var(--green);
+          color: var(--text);
+          padding: 10px 20px;
+          border-radius: var(--radius);
+          box-shadow: var(--shadow);
+          z-index: 1000;
+          animation: fadeInOut 2s ease;
+        `;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+          document.body.removeChild(toast);
+        }, 2000);
+      })
+      .catch(err => {
+        console.error('Copy failed:', err);
+      });
+  }
+  
+  function deleteHistoryItem(index) {
+    let history = JSON.parse(localStorage.getItem('qrHistory') || '[]');
+    history.splice(index, 1);
+    localStorage.setItem('qrHistory', JSON.stringify(history));
+    loadHistory();
+  }
+  
+  clearHistoryBtn.addEventListener('click', () => {
+    if (confirm('Are you sure you want to clear all history records?')) {
+      localStorage.removeItem('qrHistory');
+      loadHistory();
+    }
+  });
+  
+  // Add CSS for fadeInOut animation
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translateY(10px); }
+      20% { opacity: 1; transform: translateY(0); }
+      80% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-10px); }
+    }
+  `;
+  document.head.appendChild(style);
+</script>
+
+</body>
+</html>
